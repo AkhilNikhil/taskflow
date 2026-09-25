@@ -81,8 +81,8 @@ Complete **[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)** first (takes ~10 m
 
 ### 1. Clone & Setup Environment
 ```bash
-git clone https://github.com/AkhilNikhil/taskflow-app.git
-cd taskflow-app
+git clone https://github.com/AkhilNikhil/taskflow.git
+cd taskflow
 cp .env.example .env
 ```
 Open `.env` and enter your Supabase connection strings from [SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).

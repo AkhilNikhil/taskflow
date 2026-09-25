@@ -38,8 +38,8 @@ exit
 
 ### 4. Clone & Run TaskFlow
 ```bash
-git clone https://github.com/AkhilNikhil/taskflow-app.git
-cd taskflow-app
+git clone https://github.com/AkhilNikhil/taskflow.git
+cd taskflow
 cp .env.example .env
 nano .env
 ```

@@ -1,4 +1,4 @@
-# Pushing TaskFlow V4.9.2 to GitHub (`taskflow-app`)
+# Pushing TaskFlow V4.9.2 to GitHub (`taskflow`)
 
 ## 1. What Was Fixed & Hardened
 
@@ -22,7 +22,7 @@ Pre-built multi-arch images have been published on Docker Hub:
 ## 3. Create the Repository on GitHub
 
 1. Open [https://github.com/new](https://github.com/new) in your browser.
-2. Enter **Repository name**: `taskflow-app`
+2. Enter **Repository name**: `taskflow`
 3. Leave "Add a README file" **UNCHECKED** (we already have a complete README and docs).
 4. Click **Create repository**.
 
@@ -34,7 +34,7 @@ From this folder, run:
 git push -u origin main
 ```
 
-*(Remote `origin` is already pre-configured to `https://github.com/AkhilNikhil/taskflow-app.git`)*.
+*(Remote `origin` is already pre-configured to `https://github.com/AkhilNikhil/taskflow.git`)*.
 
 ## 5. Deploy to Render
 
@@ -45,12 +45,12 @@ git push -u origin main
     - `SUPABASE_URL`: `https://<ref>.supabase.co`
     - `SUPABASE_ANON_KEY`: `<anon-key>`
     - `ROOT_ARCHITECT_EMAIL`: `akhilbm13@gmail.com` (or your admin email)
-- **Option B (From Git Repo)**: Connect your new `taskflow-app` repository (Branch: `main`, Root Directory: `backend`).
+- **Option B (From Git Repo)**: Connect your new `taskflow` repository (Branch: `main`, Root Directory: `backend`).
 
 ### Frontend Service:
 - **Option A (Docker Hub Image)**: Select **Existing Image** &rarr; `docker.io/akhilbm/todo-frontend:v4.9.2` (or `latest`).
   - Environment Variable: `BACKEND_URL=https://<your-backend>.onrender.com`
-- **Option B (From Git Repo)**: Connect your new `taskflow-app` repository (Branch: `main`, Root Directory: `frontend`).
+- **Option B (From Git Repo)**: Connect your new `taskflow` repository (Branch: `main`, Root Directory: `frontend`).
   - Add build arguments in Render environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
 ## 6. Verification Checklist

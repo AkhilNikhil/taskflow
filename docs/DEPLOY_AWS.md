@@ -60,8 +60,8 @@ exit
 
 ### Step 4: Clone Code & Configure Environment
 ```bash
-git clone https://github.com/AkhilNikhil/taskflow-app.git
-cd taskflow-app
+git clone https://github.com/AkhilNikhil/taskflow.git
+cd taskflow
 cp .env.example .env
 nano .env
 ```
