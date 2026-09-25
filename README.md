@@ -19,14 +19,15 @@ Deployable on **localhost**, **AWS EC2**, **Render**, or **Azure**.
 ## 📑 Contents
 
 1. [What is TaskFlow?](#-what-is-taskflow)
-2. [Architecture Overview](#-architecture-overview)
-3. [Deployment Paths](#-choose-your-deployment-path)
-4. [Quick Start — Run Locally](#-quick-start--run-locally)
-5. [Docker Hub Images](#-docker-hub-images)
-6. [Environment Variables](#-environment-variables)
-7. [Automated Audit & Verification](#-automated-audit--verification)
-8. [Documentation Index](#-documentation-index)
-9. [Troubleshooting](#-troubleshooting)
+2. [Application Showcase](#-application-showcase)
+3. [Architecture Overview](#-architecture-overview)
+4. [Deployment Paths](#-choose-your-deployment-path)
+5. [Quick Start — Run Locally](#-quick-start--run-locally)
+6. [Docker Hub Images](#-docker-hub-images)
+7. [Environment Variables](#-environment-variables)
+8. [Automated Audit & Verification](#-automated-audit--verification)
+9. [Documentation Index](#-documentation-index)
+10. [Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -40,6 +41,22 @@ Deployable on **localhost**, **AWS EC2**, **Render**, or **Azure**.
 | **🔔 Smart Notifications** | Collapsed notification threads (1 unread alert per chat), deep-link navigation directly into tasks or chats, and optional Brevo transactional emails. |
 | **👑 Architect Panel** | Multi-tier role governance (`ARCHITECT` &rarr; `ADMIN` &rarr; `USER`), user suspension/activation, and instant Supabase auth session revocation. |
 | **⚡ Cloud Resilience** | Automatic backend wake-up ping for sleeping free-tier servers, retry on 502/504, Nginx reverse-proxying, and zero CORS issues. |
+
+---
+
+## 📸 Application Showcase
+
+| **Task Dashboard** | **Direct & Team Chat** |
+|:---:|:---:|
+| ![Task Dashboard](docs/images/screenshots/02_task_dashboard.png) | ![Direct & Team Chat](docs/images/screenshots/06_channels_and_chat.png) |
+
+| **Organization & Member Workloads** | **Architect Administration Panel** |
+|:---:|:---:|
+| ![Member Tasks](docs/images/screenshots/03_member_tasks.png) | ![Architect Panel](docs/images/screenshots/04_architect_panel.png) |
+
+| **Authentication & Access** | **Team Workspace Management** |
+|:---:|:---:|
+| ![Login Page](docs/images/screenshots/01_login_page.png) | ![Teams Management](docs/images/screenshots/05_teams_management.png) |
 
 ---
 
