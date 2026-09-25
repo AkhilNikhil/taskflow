@@ -1,0 +1,27 @@
+# Runs TaskFlow from pre-built Docker Hub images (no local build needed).
+# Usage:
+#   docker compose -f docker-compose.hub.yml up -d
+#
+# NOTE: The frontend image has its Supabase URL/Key configured for Akhil's deployment.
+# If connecting to your own Supabase project, build from source using:
+#   docker compose up -d --build
+services:
+  backend:
+    image: akhilbm/todo-backend:v4.9.2
+    container_name: todo-backend
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    image: akhilbm/todo-frontend:v4.9.2
+    container_name: todo-frontend
+    environment:
+      - BACKEND_URL=http://backend:5000
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
