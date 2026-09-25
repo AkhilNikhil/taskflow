@@ -15,8 +15,8 @@ You can run TaskFlow with zero build time using Docker Compose:
 
 ```bash
 # 1. Download compose file and sample env
-curl -O https://raw.githubusercontent.com/AkhilNikhil/todo-management-system/v4/docker-compose.hub.yml
-curl -O https://raw.githubusercontent.com/AkhilNikhil/todo-management-system/v4/.env.example
+curl -O https://raw.githubusercontent.com/AkhilNikhil/taskflow-app/main/docker-compose.hub.yml
+curl -O https://raw.githubusercontent.com/AkhilNikhil/taskflow-app/main/.env.example
 cp .env.example .env
 
 # 2. Fill in your DATABASE_URL, SUPABASE_URL, SUPABASE_ANON_KEY in .env

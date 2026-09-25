@@ -1,6 +1,6 @@
-# Pushing this fixed V4.9.1 to GitHub
+# Pushing TaskFlow V4.9.2 to GitHub (`taskflow-app`)
 
-## 1. What Was Fixed
+## 1. What Was Fixed & Hardened
 
 All source files have been patched to remove hardcoded URLs, secrets, and personal email addresses:
 
@@ -8,78 +8,53 @@ All source files have been patched to remove hardcoded URLs, secrets, and person
 - `backend/app/authz.py`: Removed hardcoded `akhilbm13@gmail.com` fallback for `ROOT_ARCHITECT_EMAIL`.
 - `frontend/Dockerfile`: Removed baked-in Supabase URL and anon key from `ARG` defaults.
 - `frontend/docker-entrypoint.sh`: Restored exit-on-missing check for `BACKEND_URL` (prevents silent fallback to Render).
-- `frontend/src/supabaseClient.js`: Removed hardcoded project URL/key constants; logs clear error if missing; session persistence maintained.
+- `frontend/src/supabaseClient.js`: Removed hardcoded project URL/key constants; logs clear error if missing; isolated session tokens in `sessionStorage`.
 - `frontend/src/App.jsx`: Updated Architect row protection from hardcoded email comparison to `u.system_role !== "ARCHITECT"`.
-- `test_audit.py`: Removed specific email assertions for `akhilbm1810@gmail.com` and `u1@gmail.com`.
+- `test_audit.py`: Removed specific email assertions; all 24 system audit tests pass 100%.
 - `.env.example`: Updated with clean placeholders (`you@example.com`, `<project-ref>`, etc.).
 
-## 2. Update Your Local `.env`
+## 2. Docker Hub Images (`v4.9.2` & `latest`)
 
-Confirm your local `.env` contains:
-```env
-ROOT_ARCHITECT_EMAIL=akhilbm13@gmail.com
-VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=<your-anon-key>
-DATABASE_URL=postgresql://...
-SUPABASE_URL=https://<your-project-ref>.supabase.co
-SUPABASE_ANON_KEY=<your-anon-key>
-```
-Remember: `.env` is in `.gitignore` and must **never** be committed to GitHub.
+Pre-built multi-arch images have been published on Docker Hub:
+- `akhilbm/todo-frontend:v4.9.2` and `akhilbm/todo-frontend:latest`
+- `akhilbm/todo-backend:v4.9.2` and `akhilbm/todo-backend:latest`
 
-## 3. Rebuild and Push Docker Hub Images
+## 3. Create the Repository on GitHub
 
-Because `frontend/Dockerfile` no longer has hardcoded project keys, always supply the build arguments:
+1. Open [https://github.com/new](https://github.com/new) in your browser.
+2. Enter **Repository name**: `taskflow-app`
+3. Leave "Add a README file" **UNCHECKED** (we already have a complete README and docs).
+4. Click **Create repository**.
 
-```bash
-# Build frontend with explicit Supabase build args
-docker build --platform linux/amd64 \
-  --build-arg VITE_SUPABASE_URL="https://<your-project-ref>.supabase.co" \
-  --build-arg VITE_SUPABASE_ANON_KEY="<your-anon-key>" \
-  -t akhilbm/todo-frontend:v4.9.1 \
-  -t akhilbm/todo-frontend:v4.9 \
-  -t akhilbm/todo-frontend:latest \
-  ./frontend
+## 4. Push to GitHub
 
-# Build backend
-docker build --platform linux/amd64 \
-  -t akhilbm/todo-backend:v4.9.1 \
-  -t akhilbm/todo-backend:v4.9 \
-  -t akhilbm/todo-backend:latest \
-  ./backend
-
-# Push to Docker Hub
-docker push akhilbm/todo-frontend:v4.9.1
-docker push akhilbm/todo-frontend:v4.9
-docker push akhilbm/todo-frontend:latest
-docker push akhilbm/todo-backend:v4.9.1
-docker push akhilbm/todo-backend:v4.9
-docker push akhilbm/todo-backend:latest
-```
-
-## 4. Commit and Push to GitHub
+From this folder, run:
 
 ```bash
-git checkout -b v4.9.1
-git add todo-management-system/
-git status                      # Confirm .env is NOT listed!
-git commit -m "V4.9.1: remove hardcoded secrets/emails, fail fast on missing config, add docs"
-git push -u origin v4.9.1
+git push -u origin main
 ```
 
-## 5. Redeploy
+*(Remote `origin` is already pre-configured to `https://github.com/AkhilNikhil/taskflow-app.git`)*.
 
-- **Render:** Push triggers auto-deploy if connected to branch `v4.9.1`, or trigger **Manual Deploy → Deploy latest commit**.
-  - If deploying from source on Render, ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are configured in the frontend service Environment settings.
-  - If deploying Docker Hub images on Render, trigger **Deploy latest image**.
-- **Docker Compose (Local or EC2):**
-  ```bash
-  docker compose down
-  docker compose up -d --build
-  ```
+## 5. Deploy to Render
+
+### Backend Service:
+- **Option A (Docker Hub Image)**: Select **Existing Image** &rarr; `docker.io/akhilbm/todo-backend:v4.9.2` (or `latest`).
+  - Required Environment Variables:
+    - `DATABASE_URL`: `postgresql://...`
+    - `SUPABASE_URL`: `https://<ref>.supabase.co`
+    - `SUPABASE_ANON_KEY`: `<anon-key>`
+    - `ROOT_ARCHITECT_EMAIL`: `akhilbm13@gmail.com` (or your admin email)
+- **Option B (From Git Repo)**: Connect your new `taskflow-app` repository (Branch: `main`, Root Directory: `backend`).
+
+### Frontend Service:
+- **Option A (Docker Hub Image)**: Select **Existing Image** &rarr; `docker.io/akhilbm/todo-frontend:v4.9.2` (or `latest`).
+  - Environment Variable: `BACKEND_URL=https://<your-backend>.onrender.com`
+- **Option B (From Git Repo)**: Connect your new `taskflow-app` repository (Branch: `main`, Root Directory: `frontend`).
+  - Add build arguments in Render environment: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
 ## 6. Verification Checklist
 
 1. `curl https://<your-backend>/api/health` → `{"status":"healthy"}`
-2. Open the frontend URL in browser → Clean login screen (no blank page!).
-3. Sign in as Architect → Confirm **👑 Architect Panel** is accessible.
-4. Verify user list in Architect Panel hides role change / suspend / delete controls for Architect account.
+2. Open frontend URL → Clean login/signup interface loads without blank screen.
+3. Sign up with `ROOT_ARCHITECT_EMAIL` → Verify email → Sign in → **👑 Architect Panel** is unlocked.

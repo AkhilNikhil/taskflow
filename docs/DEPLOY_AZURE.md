@@ -38,8 +38,8 @@ exit
 
 ### 4. Clone & Run TaskFlow
 ```bash
-git clone -b v4 https://github.com/AkhilNikhil/todo-management-system.git
-cd todo-management-system
+git clone https://github.com/AkhilNikhil/taskflow-app.git
+cd taskflow-app
 cp .env.example .env
 nano .env
 ```

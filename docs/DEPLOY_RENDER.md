@@ -23,7 +23,7 @@ The order of operations is crucial: **Deploy Backend first &rarr; Deploy Fronten
 ### Step 1: Deploy Backend Web Service
 1. Log in to [https://render.com](https://render.com) using your GitHub account.
 2. Click **New +** &rarr; **Web Service**.
-3. Select your repository: `todo-management-system` (Branch: `main` or `v4.9.2`).
+3. Select your repository: `taskflow-app` (Branch: `main`).
 4. Configure service details:
    - **Name**: `taskflow-backend`
    - **Language / Runtime**: `Docker`

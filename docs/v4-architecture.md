@@ -1,6 +1,6 @@
 # V4 Architecture Specification
 
-This document defines the architectural specification, design decisions, data models, security parameters, and implementation roadmap for **V4** of the `todo-management-system`.
+This document defines the architectural specification, design decisions, data models, security parameters, and implementation roadmap for **TaskFlow** (`taskflow-app`).
 
 ---
 

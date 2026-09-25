@@ -81,8 +81,8 @@ Complete **[docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)** first (takes ~10 m
 
 ### 1. Clone & Setup Environment
 ```bash
-git clone -b v4 https://github.com/AkhilNikhil/todo-management-system.git
-cd todo-management-system
+git clone https://github.com/AkhilNikhil/taskflow-app.git
+cd taskflow-app
 cp .env.example .env
 ```
 Open `.env` and enter your Supabase connection strings from [SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
@@ -143,7 +143,7 @@ Stored in `.env` locally, or configured in your cloud provider's dashboard:
 
 ## 🧪 Automated Audit & Verification
 
-TaskFlow includes an automated end-to-end verification suite in [test_audit.py](file:///c:/Users/anush/Desktop/project-full-stack/todo-management-system/test_audit.py):
+TaskFlow includes an automated end-to-end verification suite in [test_audit.py](test_audit.py):
 
 ```bash
 docker compose exec backend python test_audit.py
