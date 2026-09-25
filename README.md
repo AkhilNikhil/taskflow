@@ -1,5 +1,6 @@
 # ✅ TaskFlow V4.9.2 — Collaborative Task, Team & Chat Platform
 
+[![Live Demo](https://img.shields.io/badge/Demo-Live_Deployment-success?logo=render)](https://todo-frontend-v4-1.onrender.com/)
 [![Docker Hub Backend](https://img.shields.io/badge/Docker_Hub-todo--backend%3Av4.9.2-blue?logo=docker)](https://hub.docker.com/r/akhilbm/todo-backend)
 [![Docker Hub Frontend](https://img.shields.io/badge/Docker_Hub-todo--frontend%3Av4.9.2-blue?logo=docker)](https://hub.docker.com/r/akhilbm/todo-frontend)
 [![Python Version](https://img.shields.io/badge/Python-3.12-brightgreen?logo=python)](https://python.org)
@@ -8,6 +9,8 @@
 [![Email Relay](https://img.shields.io/badge/Brevo-SMTP_Relay-0092ff?logo=mail.ru)](https://brevo.com)
 
 A modern, containerized full-stack task management and team collaboration platform built with **React 19**, **Flask 3.1**, **Gunicorn**, **Supabase PostgreSQL & Auth**, **Brevo SMTP**, **Docker**, and **Nginx**.
+
+🌐 **Live Demo Application**: [https://todo-frontend-v4-1.onrender.com/](https://todo-frontend-v4-1.onrender.com/) *(Free tier instances auto-wake in ~30s on first load)*
 
 Deployable on **localhost**, **AWS EC2**, **Render**, or **Azure**.
 
