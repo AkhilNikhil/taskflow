@@ -45,6 +45,8 @@ Deployable on **localhost**, **AWS EC2**, **Render**, or **Azure**.
 
 ## 🏗 Architecture Overview
 
+![TaskFlow Architecture](docs/images/taskflow_architecture.jpg)
+
 ```mermaid
 flowchart LR
     U[👤 Browser] -->|Port 80| N[Frontend Container<br/>React 19 + Nginx]
