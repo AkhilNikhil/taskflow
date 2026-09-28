@@ -1,145 +1,223 @@
-# 🟠 Deploy TaskFlow on AWS
+# 🟠 Deploy TaskFlow on AWS EC2 (Pure Image Pull)
 
-You have two deployment strategies on AWS:
+This guide documents the **verified, production-standard deployment** of TaskFlow V4.9.2 on an AWS EC2 Ubuntu instance using pre-built immutable images from Docker Hub.
 
-| Feature | **Option A — Standalone EC2 (Recommended)** | **Option B — AWS App Runner** |
-|:---|:---|:---|
-| **ECR Registry Needed?** | ❌ **No ECR Needed!** Pull directly from Docker Hub or build locally | ✅ Yes (App Runner pulls only from ECR) |
-| **Simplicity** | ⭐ Easiest (Single Ubuntu instance with Docker) | ⭐⭐ Medium (Managed containers) |
-| **How it runs** | Standard `docker compose` | Managed serverless containers |
-| **Cost** | Fixed (`t3.micro` or `t3.small`) | Pay-per-use CPU/RAM |
-| **HTTPS** | Elastic IP + Nginx Certbot / ALB | Automatic AWS SSL certificate |
+> 🔒 **Zero Source Code Rule:**  
+> We do **NOT** run `git clone`, copy source files, or install compilers/runtimes (Node.js, Python, npm) on the production server. We deploy strictly using pre-built images from Docker Hub (`akhilbm/todo-frontend` and `akhilbm/todo-backend`).
 
 ---
 
-## 📌 Do I Need AWS ECR to Deploy on EC2?
+## 📌 Architecture Overview
 
-> 💡 **Answer: NO, ECR is NOT required for EC2!**
-> 
-> When deploying to an EC2 instance, you are running a standard Linux VM. You can either:
-> 1. Pull the pre-built public Docker images **directly from Docker Hub** (`akhilbm/todo-backend:v4.9`, `akhilbm/todo-frontend:v4.9`), or
-> 2. Clone the repository and run `docker compose up -d --build`.
-> 
-> You do **not** need to create or pay for Amazon ECR repositories when using EC2. ECR is only needed if using App Runner or ECS with private container registries.
+```
+                                  [ AWS Internet Gateway ]
+                                             │
+                                    Inbound HTTP Port 80
+                                             ▼
+                      ┌─────────────────────────────────────────────┐
+                      │         AWS EC2 HOST (Ubuntu 24.04)         │
+                      │  Security Group: Inbound 80 (HTTP), 22 (SSH)│
+                      └──────────────────────┬──────────────────────┘
+                                             │ Docker Port Forward :80
+                                             ▼
+┌───────────────────────────────────────────────────────────────────────────────────────────┐
+│                     DOCKER USER-DEFINED BRIDGE NETWORK (taskflow-net)                     │
+│                                                                                           │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ FRONTEND CONTAINER: todo-frontend (Nginx 1.27 Alpine | 25 MB)                       │  │
+│  │   • Port 80 Ingress                                                                 │  │
+│  │   • Route /       ──> Serves React 19 Static Bundle                                 │  │
+│  │   • Route /api/*  ──> Reverse Proxy to http://backend:5000/api/*                    │  │
+│  └─────────────────────────────────────────┬───────────────────────────────────────────┘  │
+│                                            │ Internal DNS: http://backend:5000            │
+│                                            ▼                                              │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │ BACKEND CONTAINER: todo-backend (Python 3.12-Slim | appuser Non-Root)               │  │
+│  │   • Gunicorn WSGI :5000 (2 Workers, 4 Threads)                                      │  │
+│  │   • Native Healthcheck: curl -f http://localhost:5000/api/health (Every 30s)        │  │
+│  └─────────────────────────────────────────┬───────────────────────────────────────────┘  │
+└────────────────────────────────────────────┼──────────────────────────────────────────────┘
+                                             │ Outbound TLS (Port 5432/6543)
+                                             ▼
+                      ┌─────────────────────────────────────────────┐
+                      │      SUPABASE MANAGED DATA PLATFORM         │
+                      │  • PgBouncer Connection Pooler (Port 6543)  │
+                      │  • PostgreSQL 15 Relational Store           │
+                      │  • Supabase Auth & JWT Validator            │
+                      └─────────────────────────────────────────────┘
+```
 
 ---
 
-## Option A — Deploy on EC2 with Docker Compose (Recommended)
+## 🚀 Step-by-Step Deployment Runbook
 
-### Step 1: Launch an EC2 Instance
+### Step 1: Launch an AWS EC2 Instance
 1. Open the [AWS EC2 Console](https://console.aws.amazon.com/ec2).
 2. Click **Launch instance**:
-   - **Name**: `taskflow-prod`
-   - **OS**: Ubuntu Server 24.04 LTS (64-bit x86)
-   - **Instance Type**: `t3.small` (2 vCPU, 2 GB RAM recommended if building from source; `t3.micro` is sufficient if pulling pre-built Docker Hub images)
-   - **Key pair**: Create or select an existing `.pem` key pair
-   - **Network Settings**:
-     - Allow SSH (`22`) from *My IP*
-     - Allow HTTP (`80`) from *Anywhere* (`0.0.0.0/0`)
-     - Allow HTTPS (`443`) from *Anywhere* (if adding SSL later)
-   - **Storage**: 20 GB gp3
-3. Click **Launch instance**.
-4. *(Recommended)* Under **EC2 → Network & Security → Elastic IPs**, allocate an Elastic IP and associate it with your instance so the public IP never changes on reboot.
-
-### Step 2: Connect to your Server
-```bash
-chmod 400 your-key.pem
-ssh -i your-key.pem ubuntu@<YOUR_EC2_PUBLIC_IP>
-```
-
-### Step 3: Install Docker & Docker Compose
-Run the official automated Docker installation script:
-```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-sudo apt-get install -y git
-exit
-```
-*Reconnect via SSH so the docker group permissions take effect.*
-
-### Step 4: Clone Code & Configure Environment
-```bash
-git clone https://github.com/AkhilNikhil/taskflow.git
-cd taskflow
-cp .env.example .env
-nano .env
-```
-Fill in your configuration:
-- `DATABASE_URL`: Your Supabase Session pooler connection string
-- `SUPABASE_URL`: Your Supabase Project URL
-- `SUPABASE_ANON_KEY`: Your Supabase Anon Key
-- `ROOT_ARCHITECT_EMAIL`: Your email address
-- `FRONTEND_URL=http://<YOUR_EC2_PUBLIC_IP>`
-- `CORS_ORIGINS=http://<YOUR_EC2_PUBLIC_IP>`
-
-*(Save with `Ctrl+O`, `Enter`, and exit with `Ctrl+X`)*
-
-### Step 5: Start the Application
-
-You can start using either approach:
-
-#### Way 1: Pull Pre-built Images from Docker Hub (Fastest, zero compilation)
-```bash
-docker compose -f docker-compose.hub.yml pull
-docker compose -f docker-compose.hub.yml up -d
-```
-
-#### Way 2: Build Locally on the Server
-```bash
-docker compose up -d --build
-```
-
-### Step 6: Verify
-```bash
-docker compose ps
-```
-Both `todo-backend` and `todo-frontend` should show as **Up / Healthy**.
-
-1. In Supabase dashboard: **Authentication → URL Configuration** &rarr; Set **Site URL** and **Redirect URLs** to `http://<YOUR_EC2_PUBLIC_IP>`.
-2. Open your browser: `http://<YOUR_EC2_PUBLIC_IP>`.
-3. Register using the email defined in `ROOT_ARCHITECT_EMAIL`. Confirm your email, sign in, and you will see the **👑 Architect Panel**!
+   * **Name**: `taskflow-prod`
+   * **AMI**: `Ubuntu Server 24.04 LTS (HVM), SSD Volume Type` (64-bit x86)
+   * **Instance Type**: `t3.micro` or `t2.micro` (Free tier eligible, 1 vCPU, 1 GB RAM — *1 GB RAM is fully sufficient because we pull pre-compiled images directly from Docker Hub*).
+   * **Key Pair**: Create or select an RSA `.pem` key pair (e.g., `taskflow-key.pem`).
+   * **Network Settings**:
+     * ☑ **Allow SSH traffic from**: `Anywhere (0.0.0.0/0)` or `My IP`
+     * ☑ **Allow HTTP traffic from the internet**: Port `80` (`0.0.0.0/0`)
+     * ☑ **Allow HTTPS traffic from the internet**: Port `443` (`0.0.0.0/0`)
+   * **Storage**: `15` to `20 GiB gp3` SSD.
+3. Click **Launch instance** and copy the **Public IPv4 address** (e.g., `13.60.15.82`).
 
 ---
 
-## Option B — Deploy on AWS App Runner (Serverless Managed Containers)
+### Step 2: Connect via SSH
+From your local terminal (PowerShell, Command Prompt, or Git Bash):
 
-If you prefer serverless containers without managing an EC2 server, App Runner pulls images from Amazon ECR.
-
-### Step 1: Create ECR Repositories
-Run from your local terminal with AWS CLI configured:
 ```bash
-export AWS_REGION=ap-south-1
-export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export ECR=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+chmod 400 taskflow-key.pem
+ssh -i "taskflow-key.pem" ubuntu@<YOUR_EC2_PUBLIC_IP>
+```
+*(Type `yes` when prompted to verify host authenticity).*
 
-aws ecr create-repository --repository-name taskflow-backend --region $AWS_REGION
-aws ecr create-repository --repository-name taskflow-frontend --region $AWS_REGION
+---
 
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR
+### Step 3: Install Docker Engine & Compose Plugin
+Run the automated Docker installation script directly on the server:
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker ubuntu && exit
+```
+*(This installs Docker Engine, enables the systemd service, adds `ubuntu` to the `docker` group, and logs you out to apply permissions).*
+
+Reconnect immediately:
+```bash
+ssh -i "taskflow-key.pem" ubuntu@<YOUR_EC2_PUBLIC_IP>
+
+# Verify Docker installation
+docker --version && docker compose version
 ```
 
-### Step 2: Push Images to ECR
+---
+
+### Step 4: Create Production Workspace & Secrets (`.env`)
+Create an isolated directory `/opt/taskflow` to manage production configurations:
+
 ```bash
-# Pull images from Docker Hub and retag for ECR:
-docker pull --platform linux/amd64 akhilbm/todo-backend:v4.9
-docker pull --platform linux/amd64 akhilbm/todo-frontend:v4.9
-
-docker tag akhilbm/todo-backend:v4.9 $ECR/taskflow-backend:v4.9
-docker tag akhilbm/todo-frontend:v4.9 $ECR/taskflow-frontend:v4.9
-
-docker push $ECR/taskflow-backend:v4.9
-docker push $ECR/taskflow-frontend:v4.9
+sudo mkdir -p /opt/taskflow && sudo chown ubuntu:ubuntu /opt/taskflow && cd /opt/taskflow
 ```
 
-### Step 3: Create App Runner Services
-1. **Backend Service**:
-   - Source: ECR `taskflow-backend:v4.9`
-   - Port: `5000`
-   - Health check: HTTP `/api/health`
-   - Environment variables: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ROOT_ARCHITECT_EMAIL`
-2. **Frontend Service**:
-   - Source: ECR `taskflow-frontend:v4.9`
-   - Port: `80`
-   - Environment variables: `BACKEND_URL=https://<your-backend-apprunner-domain>`
-3. Wire the frontend domain into the backend's `FRONTEND_URL` and `CORS_ORIGINS`.
+Create the `.env` file with **zero hardcoded IPs** (using `CORS_ORIGINS=*` to remain completely cloud-agnostic):
+
+```bash
+cat << 'EOF' > .env
+# Database Connection (Supabase PostgreSQL Session Pooler)
+DATABASE_URL=postgresql://postgres.<project-ref>:<db-password>@aws-0-ap-south-1.pooler.supabase.com:6543/postgres
+
+# Supabase Auth
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_ANON_KEY=<your-supabase-anon-key>
+SUPABASE_DB_PASSWORD=<your-db-password>
+SUPABASE_JWT_SECRET=<your-jwt-secret>
+
+# App Behaviour (Zero Hardcoded IPs)
+ROOT_ARCHITECT_EMAIL=akhilbm13@gmail.com
+CORS_ORIGINS=*
+RUN_SCHEMA_SYNC=true
+
+# Transactional Email Pipeline (Brevo SMTP Relay)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=<your-brevo-smtp-user>
+SMTP_PASSWORD=<your-brevo-smtp-key>
+SMTP_SENDER=akhilbm13@gmail.com
+SMTP_SENDER_NAME=TaskFlow
+
+# Frontend Config
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>
+BACKEND_URL=http://backend:5000
+EOF
+```
+
+---
+
+### Step 5: Create Production `docker-compose.yml`
+Create the orchestration file pointing directly to the Docker Hub registry:
+
+```bash
+cat << 'EOF' > docker-compose.yml
+services:
+  backend:
+    image: akhilbm/todo-backend:v4.9.2
+    container_name: todo-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "5000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    image: akhilbm/todo-frontend:v4.9.2
+    container_name: todo-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - BACKEND_URL=http://backend:5000
+    depends_on:
+      - backend
+EOF
+```
+
+---
+
+### Step 6: Pull Pre-Built Images & Launch Containers
+```bash
+# 1. Pull the pre-built images from Docker Hub
+docker compose pull
+
+# 2. Launch the containers in detached mode
+docker compose up -d
+```
+
+---
+
+### Step 7: Verify Running State & Healthcheck
+```bash
+# Check container status
+docker compose ps
+```
+*Expected Output:*
+```text
+NAME            IMAGE                         COMMAND                  SERVICE    STATUS              PORTS
+todo-backend    akhilbm/todo-backend:v4.9.2    "sh -c 'gunicorn --b…"   backend    running (healthy)   5000/tcp
+todo-frontend   akhilbm/todo-frontend:v4.9.2   "/docker-entrypoint.…"   frontend   running             0.0.0.0:80->80/tcp
+```
+
+```bash
+# Test internal Nginx reverse proxy endpoint
+curl -i http://localhost/api/health
+```
+*Expected Output:* `HTTP/1.1 200 OK`
+
+---
+
+### Step 8: Supabase URL Configuration
+1. Open your **Supabase Dashboard**.
+2. Navigate to: **Authentication &rarr; URL Configuration**.
+3. Under **Redirect URLs**, click **Add URL** and add:
+   * `http://<YOUR_EC2_PUBLIC_IP>`
+   * `http://<YOUR_EC2_PUBLIC_IP>/*`
+4. Click **Save**.
+
+---
+
+### Step 9: Open in Browser
+Open your browser and navigate to:
+👉 **`http://<YOUR_EC2_PUBLIC_IP>`**
+
+> ⚠️ **Browser Troubleshooting Note (Brave & Chrome):**
+> * **Brave Browser:** Brave has an aggressive privacy shield called *"Upgrade connections to HTTPS"*. Because raw EC2 IP addresses do not have an SSL certificate on port 443, Brave will force HTTPS and show `ERR_CONNECTION_REFUSED`. Click the **Brave Lion Shield icon** in the address bar and toggle **"Upgrade connections to HTTPS" to OFF**, or test in **Google Chrome / Incognito** using explicit `http://`.
